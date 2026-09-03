@@ -4,8 +4,374 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Thaïlande — Billet puis voyage</title>
+  <style>
+    :root {
+      --bg: #07140f;
+      --card: rgba(10, 28, 22, 0.82);
+      --line: #1e4a38;
+      --text: #f7f1de;
+      --muted: #b7c4a8;
+      --gold: #e4b23c;
+      --gold2: #f3d27a;
+      --teal: #2ec4b6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+      padding: 18px 16px 72px;
+      background:
+        radial-gradient(900px 520px at 50% -8%, #1a5a3a 0%, transparent 52%),
+        radial-gradient(700px 420px at 110% 110%, #123d4a 0%, transparent 48%),
+        linear-gradient(180deg, #08150f 0%, #071016 100%);
+    }
+    .wrap { max-width: 540px; margin: 0 auto; }
+    header { text-align: center; }
+    .flag {
+      display: inline-flex; width: 42px; height: 26px; border-radius: 3px;
+      overflow: hidden; flex-direction: column; margin-bottom: 10px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.12);
+    }
+    .flag i { display: block; flex: 1; }
+    .flag .r { background: #A51931; }
+    .flag .w { background: #fff; flex: 0.7; }
+    .flag .b { background: #2D2A4A; flex: 1.15; }
+    h1 { font-size: 1.42rem; letter-spacing: -0.03em; font-weight: 800; }
+    .sub { color: var(--muted); margin-top: 6px; font-size: 0.92rem; line-height: 1.45; }
+    .nav {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      display: grid; grid-template-columns: 1fr 1fr;
+      background: #0a1a14; border-top: 1px solid var(--line);
+      padding: 8px 16px calc(8px + env(safe-area-inset-bottom));
+      z-index: 10;
+    }
+    .nav button {
+      background: none; border: 0; color: var(--muted);
+      padding: 10px; font-weight: 700; font-size: 0.92rem; cursor: pointer;
+    }
+    .nav button.on { color: var(--gold2); }
+    .page { display: none; }
+    .page.on { display: block; }
+    .gauge-wrap { position: relative; width: min(88vw, 430px); margin: 14px auto 6px; }
+    svg.gauge { width: 100%; height: auto; display: block; }
+    .center {
+      position: absolute; inset: 18% 16%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; pointer-events: none;
+    }
+    .center .now {
+      font-size: clamp(1.7rem, 7.4vw, 2.45rem);
+      font-weight: 800; letter-spacing: -0.05em; line-height: 1; color: #efe0b8;
+    }
+    .center .of { color: var(--muted); margin-top: 6px; font-size: 0.9rem; }
+    .center .days { margin-top: 8px; font-size: 0.98rem; font-weight: 700; color: var(--gold2); }
+    .ticket {
+      margin: 8px auto 14px; max-width: 430px; border-radius: 16px; padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+      border: 1px solid var(--line);
+      background: linear-gradient(90deg, rgba(196,59,59,.18), rgba(14,40,32,.7));
+    }
+    .ticket.on {
+      background: linear-gradient(90deg, rgba(228,178,60,.2), rgba(42,180,160,.16));
+      border-color: #8a6a22;
+    }
+    .lock {
+      width: 42px; height: 42px; border-radius: 12px;
+      display: grid; place-items: center; background: #2a1515; font-size: 1.25rem; flex-shrink: 0;
+    }
+    .ticket.on .lock { background: #2a2410; }
+    .ticket h2 { font-size: 0.95rem; font-weight: 750; }
+    .ticket p { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+    .phases { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .phase { border: 1px solid var(--line); border-radius: 14px; padding: 12px; background: var(--card); }
+    .phase small { color: var(--muted); font-size: 0.72rem; letter-spacing: .04em; text-transform: uppercase; }
+    .phase b { display: block; margin-top: 4px; font-size: 1.05rem; }
+    .phase .bar { height: 6px; border-radius: 99px; background: #13241c; margin-top: 8px; overflow: hidden; }
+    .phase .fill { height: 100%; width: 0; border-radius: 99px; transition: width .4s ease; }
+    .p1 .fill { background: linear-gradient(90deg, #c43b3b, #e4b23c); }
+    .p2 .fill { background: linear-gradient(90deg, #1aa7a1, #7dffd4); }
+    .done { color: var(--gold2); }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-top: 12px; }
+    label { display: block; font-size: 0.74rem; color: var(--muted); margin-bottom: 6px; }
+    input, select {
+      width: 100%; background: #07140f; border: 1px solid var(--line);
+      color: var(--text); border-radius: 10px; padding: 12px; font-size: 1.05rem;
+    }
+    input:focus, select:focus { outline: 2px solid rgba(228,178,60,.35); border-color: var(--gold); }
+    .add-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+    button.add {
+      border: none; border-radius: 10px; padding: 12px 16px; font-weight: 750; cursor: pointer;
+      background: linear-gradient(90deg, #e4b23c, #2ec4b6); color: #07140f; white-space: nowrap;
+    }
+    .flash { color: var(--teal); font-size: 0.85rem; margin-top: 8px; min-height: 1.2em; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat { background: #07140f; border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+    .stat span { display: block; font-size: 0.75rem; color: var(--muted); }
+    .stat b { display: block; font-size: 1.12rem; margin-top: 3px; letter-spacing: -0.03em; }
+    .ok { color: var(--teal); }
+    .warn { color: var(--gold); }
+    .entry {
+      display: grid; grid-template-columns: 1fr auto auto;
+      gap: 8px; align-items: center;
+      padding: 12px 0; border-top: 1px solid var(--line);
+    }
+    .entry:first-child { border-top: none; }
+    .entry .src { font-weight: 650; }
+    .entry .when { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    .entry .amt { color: var(--gold2); font-weight: 750; }
+    .entry button {
+      background: transparent; border: 1px solid #3a2a2a; color: #e08a8a;
+      border-radius: 8px; padding: 6px 8px; cursor: pointer; font-size: 0.75rem;
+    }
+    .empty { color: var(--muted); font-size: 0.9rem; padding: 8px 0; }
+    .sum { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 700; }
+  </style>
 </head>
 <body>
-<p>Chargement du fichier complet...</p>
+  <div class="wrap">
+    <div id="page-home" class="page on">
+      <header>
+        <div class="flag" aria-hidden="true"><i class="r"></i><i class="w"></i><i class="b"></i><i class="w"></i><i class="r"></i></div>
+        <h1>Direction Thaïlande</h1>
+        <p class="sub">Avec mon frère · 100 jours<br>1 000 € pour le billet · 3 000 € pour le voyage</p>
+      </header>
+      <div class="gauge-wrap">
+        <svg class="gauge" viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="88" fill="none" stroke="#143328" stroke-width="7"/>
+          <circle id="arcDays" cx="100" cy="100" r="88" fill="none" stroke="#2ec4b6" stroke-width="7"
+            stroke-linecap="round" transform="rotate(-90 100 100)"/>
+          <circle cx="100" cy="100" r="74" fill="none" stroke="#143328" stroke-width="13"/>
+          <circle id="arcMoney" cx="100" cy="100" r="74" fill="none" stroke="url(#grad)" stroke-width="13"
+            stroke-linecap="round" transform="rotate(-90 100 100)"/>
+          <g id="mark1000"><circle r="5" fill="#e4b23c" stroke="#07140f" stroke-width="2"/></g>
+          <defs>
+            <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#c43b3b"/>
+              <stop offset="38%" stop-color="#e4b23c"/>
+              <stop offset="100%" stop-color="#2ec4b6"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="center">
+          <div class="now" id="now">0 €</div>
+          <div class="of">sur 3 000 €</div>
+          <div class="days" id="daysLabel">Jour 1 / 100</div>
+        </div>
+      </div>
+      <div class="ticket" id="ticket">
+        <div class="lock" id="lock">🔒</div>
+        <div>
+          <h2 id="ticketTitle">Billet d'avion verrouillé</h2>
+          <p id="ticketText">Atteins 1 000 € pour débloquer l'achat des billets.</p>
+        </div>
+      </div>
+      <div class="phases">
+        <div class="phase p1">
+          <small>Étape 1 · Billet</small>
+          <b id="p1label">0 / 1 000 €</b>
+          <div class="bar"><div class="fill" id="p1fill"></div></div>
+        </div>
+        <div class="phase p2">
+          <small>Étape 2 · Voyage</small>
+          <b id="p2label">0 / 2 000 €</b>
+          <div class="bar"><div class="fill" id="p2fill"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="add-row">
+          <div>
+            <label for="amount">Montant (€)</label>
+            <input id="amount" type="number" min="1" step="1" inputmode="decimal" placeholder="ex. 50" />
+          </div>
+          <button class="add" id="add" type="button">Ajouter</button>
+        </div>
+        <label for="source" style="margin-top:10px">D’où ça vient</label>
+        <input id="source" type="text" placeholder="Tu notes toi-même…" />
+        <div class="flash" id="flash"></div>
+      </div>
+      <div class="grid2" style="margin-top:12px">
+        <div class="stat"><span>Jours restants</span><b id="left">100</b></div>
+        <div class="stat"><span>Rythme</span><b id="pace">30 € / j</b></div>
+        <div class="stat"><span>Reste avant le billet</span><b id="toTicket">1 000 €</b></div>
+        <div class="stat"><span>Écart vs rythme</span><b id="delta">0 €</b></div>
+      </div>
+    </div>
+    <div id="page-hist" class="page">
+      <header>
+        <h1>Historique</h1>
+        <p class="sub">Toutes les rentrées d’argent</p>
+      </header>
+      <div class="card">
+        <div class="sum"><span>Total</span><span id="histTotal">0 €</span></div>
+        <div id="log"><p class="empty">Aucune entrée pour l’instant.</p></div>
+      </div>
+    </div>
+  </div>
+  <nav class="nav">
+    <button type="button" class="on" id="btn-home">Jauge</button>
+    <button type="button" id="btn-hist">Historique</button>
+  </nav>
+  <script>
+    const GOAL = 3000, STEP1 = 1000, DAYS = 100;
+    const C_MONEY = 2 * Math.PI * 74;
+    const C_DAYS = 2 * Math.PI * 88;
+    const $ = (id) => document.getElementById(id);
+    const euro = (n) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(Math.round(n || 0));
+    function todayStr() {
+      const d = new Date();
+      const z = (x) => String(x).padStart(2, '0');
+      return d.getFullYear() + '-' + z(d.getMonth()+1) + '-' + z(d.getDate());
+    }
+    function parseDate(s) {
+      const p = String(s).split('-').map(Number);
+      return new Date(p[0], p[1]-1, p[2]);
+    }
+    function diffDays(from, to) {
+      return Math.floor((parseDate(to) - parseDate(from)) / 86400000);
+    }
+    function niceDate(s) {
+      return parseDate(s).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+    }
+    function load() {
+      try { return JSON.parse(localStorage.getItem('thailande-100') || '{}'); }
+      catch(e) { return {}; }
+    }
+    function save() { localStorage.setItem('thailande-100', JSON.stringify(state)); }
+    const raw = load();
+    const state = {
+      start: raw.start || todayStr(),
+      entries: Array.isArray(raw.entries) ? raw.entries : []
+    };
+    if (!state.entries.length && Number(raw.current) > 0) {
+      state.entries.push({ id: String(Date.now()), amount: Number(raw.current), date: todayStr() });
+    }
+    save();
+    function total() {
+      var s = 0;
+      for (var i = 0; i < state.entries.length; i++) s += Number(state.entries[i].amount || 0);
+      return s;
+    }
+    function showPage(name) {
+      $('page-home').classList.toggle('on', name === 'home');
+      $('page-hist').classList.toggle('on', name === 'hist');
+      $('btn-home').classList.toggle('on', name === 'home');
+      $('btn-hist').classList.toggle('on', name === 'hist');
+    }
+    function render() {
+      var current = total();
+      var elapsed = Math.max(0, diffDays(state.start, todayStr()));
+      var dayNum = Math.min(DAYS, elapsed + 1);
+      var left = Math.max(0, DAYS - elapsed);
+      var moneyPct = Math.max(0, Math.min(1, current / GOAL));
+      var daysPct = Math.max(0, Math.min(1, elapsed / DAYS));
+      var unlocked = current >= STEP1;
+      var am = $('arcMoney'), ad = $('arcDays');
+      am.style.strokeDasharray = String(C_MONEY);
+      am.style.strokeDashoffset = String(C_MONEY * (1 - moneyPct));
+      ad.style.strokeDasharray = String(C_DAYS);
+      ad.style.strokeDashoffset = String(C_DAYS * (1 - daysPct));
+      var ang = (STEP1 / GOAL) * 360;
+      var rad = (ang - 90) * Math.PI / 180;
+      var mark = document.querySelector('#mark1000 circle');
+      mark.setAttribute('cx', 100 + 74 * Math.cos(rad));
+      mark.setAttribute('cy', 100 + 74 * Math.sin(rad));
+      $('now').textContent = euro(current);
+      $('daysLabel').textContent = elapsed >= DAYS
+        ? 'Jour 100 / 100 — jour J'
+        : 'Jour ' + dayNum + ' / ' + DAYS + ' · ' + left + ' j restants';
+      var ticket = $('ticket');
+      if (current >= GOAL) {
+        ticket.className = 'ticket on';
+        $('lock').textContent = '✈️';
+        $('ticketTitle').textContent = 'Voyage financé';
+        $('ticketText').textContent = '3 000 € atteints. Billet + séjour : c’est bon.';
+      } else if (unlocked) {
+        ticket.className = 'ticket on';
+        $('lock').textContent = '✈️';
+        $('ticketTitle').textContent = 'Billet débloqué';
+        $('ticketText').textContent = 'Tu peux payer les billets. Encore ' + euro(GOAL - current) + ' pour le voyage.';
+      } else {
+        ticket.className = 'ticket';
+        $('lock').textContent = '🔒';
+        $('ticketTitle').textContent = 'Billet d’avion verrouillé';
+        $('ticketText').textContent = 'Encore ' + euro(STEP1 - current) + ' pour débloquer l’achat des billets.';
+      }
+      var p1 = Math.max(0, Math.min(1, current / STEP1));
+      var p2 = Math.max(0, Math.min(1, (current - STEP1) / (GOAL - STEP1)));
+      $('p1fill').style.width = (p1 * 100) + '%';
+      $('p2fill').style.width = (p2 * 100) + '%';
+      $('p1label').textContent = (unlocked ? 'Débloqué · ' : '') + euro(Math.min(current, STEP1)) + ' / 1 000 €';
+      $('p2label').textContent = euro(Math.max(0, current - STEP1)) + ' / 2 000 €';
+      $('p1label').className = unlocked ? 'done' : '';
+      $('left').textContent = left + (left > 1 ? ' jours' : ' jour');
+      $('pace').textContent = euro(GOAL / DAYS) + ' / j';
+      $('toTicket').textContent = unlocked ? 'Débloqué' : euro(STEP1 - current);
+      $('toTicket').className = unlocked ? 'ok' : '';
+      var shouldHave = (GOAL / DAYS) * Math.min(DAYS, elapsed + 1);
+      var delta = current - shouldHave;
+      var d = $('delta');
+      if (Math.abs(delta) < 1) { d.textContent = 'Dans les temps'; d.className = 'ok'; }
+      else if (delta > 0) { d.textContent = '+' + euro(delta); d.className = 'ok'; }
+      else { d.textContent = euro(delta); d.className = 'warn'; }
+      $('histTotal').textContent = euro(current);
+      var log = $('log');
+      if (!state.entries.length) {
+        log.innerHTML = '<p class="empty">Aucune entrée pour l’instant.</p>';
+        return;
+      }
+      var html = '';
+      for (var i = state.entries.length - 1; i >= 0; i--) {
+        var e = state.entries[i];
+        html += '<div class="entry" data-id="' + e.id + '">' +
+          '<div><div class="src">' + (e.source || 'Sans source') + '</div>' +
+          '<div class="when">' + niceDate(e.date) + '</div></div>' +
+          '<div class="amt">+ ' + euro(e.amount) + '</div>' +
+          '<button class="del" type="button">Retirer</button></div>';
+      }
+      log.innerHTML = html;
+    }
+    function addMoney() {
+      var rawVal = String($('amount').value).replace(',', '.');
+      var amount = Number(rawVal);
+      if (!amount || amount <= 0) {
+        $('flash').textContent = 'Entre un montant.';
+        $('amount').focus();
+        return;
+      }
+      var source = ($('source').value || '').trim();
+      if (!source) {
+        $('flash').textContent = 'Note d’où vient cet argent.';
+        $('source').focus();
+        return;
+      }
+      state.entries.push({
+        id: String(Date.now()) + '-' + Math.random().toString(16).slice(2),
+        amount: amount,
+        source: source,
+        date: todayStr()
+      });
+      save();
+      $('amount').value = '';
+      $('source').value = '';
+      $('flash').textContent = '+' + euro(amount) + ' · ' + source + ' · total ' + euro(total());
+      render();
+    }
+    $('add').addEventListener('click', addMoney);
+    $('amount').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') addMoney();
+    });
+    $('log').addEventListener('click', function(e) {
+      var btn = e.target.closest('.del');
+      if (!btn) return;
+      var id = btn.closest('.entry').dataset.id;
+      state.entries = state.entries.filter(function(x) { return x.id !== id; });
+      save();
+      render();
+    });
+    $('btn-home').addEventListener('click', function() { showPage('home'); });
+    $('btn-hist').addEventListener('click', function() { showPage('hist'); });
+    render();
+  </script>
 </body>
 </html>
